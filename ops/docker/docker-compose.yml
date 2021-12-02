@@ -1,0 +1,67 @@
+version: '3.8'
+services:
+  nginx:
+    image: nginx:latest
+    restart: on-failure
+    ports:
+      - "80:80"
+    privileged: true
+    pid: host
+    volumes:
+      - type: bind
+        source: ./nginx/
+        target: /etc/nginx/conf.d/
+      - ../..:/var/www/laravel-docker-codebase
+    expose:
+      - 80
+    networks:
+      - laravel-docker-network
+    depends_on:
+      - php
+
+  php:
+    build:
+        context: ./php-fpm/
+        args:
+          USER_ID: "${userId}"
+    restart: on-failure
+    privileged: true
+    pid: host
+    environment:
+      XDEBUG_CONFIG: remote_host=host.docker.internal
+    expose:
+      - 9000
+    volumes:
+      - type: bind
+        source:  ../..
+        target: /var/www/laravel-docker-codebase
+    networks:
+      - laravel-docker-network
+    depends_on:
+      - mysql
+    user: "${userId}:${groupId}"
+
+  mysql:
+    image: mysql:5.7
+    restart: on-failure
+    expose:
+      - 3306
+    ports:
+      - "3306:3306"
+    volumes:
+      - database_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: laraveldocker
+      MYSQL_USER: laraveldockeruser
+      MYSQL_PASSWORD: laraveldockerpassword
+    networks:
+      - laravel-docker-network
+
+networks:
+  laravel-docker-network: ~
+
+volumes:
+  database_data:
+    driver: local
+
